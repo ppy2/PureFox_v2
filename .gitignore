@@ -18,6 +18,7 @@ buildroot/*.diff
 .agents
 AGENTS.md
 tests
+cmt-*.tar.gz
 
 
 

@@ -67,6 +67,25 @@ SSH access is enabled: login `root`, password: `purefox`.
 - **EXT** — external master clock
 - **PLL** — RV1106 frequency synthesizer. The quality of the internal PLL is surprisingly high. According to numerous subjective tests by audio experts, the internal PLL sound quality rivals that of expensive external clock generators.
 
+<img title="" src="images/2026-05-24-10-02-10-image.png" alt="" width="389">
+
+The I2S menu settings are configured in the web interface (the "I2S Settings" page) and let you adapt the I2S output to your DAC:
+
+- **Mode** — `PLL` / `EXT`:
+  - `PLL` — clocked by the internal RV1106 synthesizer (MCLK acts as **OUTPUT**).
+  - `EXT` — external master clock (MCLK acts as **INPUT**).
+- **Output Mode** — `STD` / `8CH` / `L/R` / `±L/±R`:
+  - `STD` — standard 2-channel output.
+  - `8CH` — 8-channel mode (PCM up to 192 kHz).
+  - `L/R` — dual-mono mode.
+  - `±L/±R` — dual-mono with balanced output.
+- **MCLK** — `512` / `1024` (master clock multiplication factor).
+- **PCM Swap** — `OFF` / `ON` — invert channel order for PCM.
+- **DSD Swap** — `OFF` / `ON` — invert physical channels for DSD.
+- **44/48 Swap** — `OFF` / `ON` — reverse frequency domain order (44.1 / 48 kHz).
+
+> **Warning:** the MCLK output has different settings in PLL and EXT modes (OUTPUT/INPUT), and any change to the I2S settings takes effect only after a **device reboot**.
+
 
 ### USB (UAC2 Gadget)
 
