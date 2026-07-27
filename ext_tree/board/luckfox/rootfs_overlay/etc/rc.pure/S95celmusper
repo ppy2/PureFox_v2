@@ -1,0 +1,155 @@
+#!/bin/sh
+
+DAEMON=/opt/celmusper/celmusper-transport
+PROCESS=celmusper-transport
+LOGFILE=/tmp/celmusper-transport.log
+PIDFILE=/tmp/celmusper-transport.pid
+
+start() {
+    printf "Starting CelMusper Transport: "
+
+    if [ ! -x "$DAEMON" ]; then
+        echo "binary not found: $DAEMON"
+        return 1
+    fi
+
+    # CelMusper Transport discovers and opens a connected USB DAC itself.
+    # --daemon is mandatory: foreground mode deliberately exits when this
+    # start script terminates (PDEATHSIG).
+    rm -f "$PIDFILE"
+    if grep -qi '^I2S' /etc/output 2>/dev/null; then
+        # CelMusper enumerates only USB Audio descriptors.  Give its narrowly
+        # scoped preload shim a static descriptor for the real I2S card 0.
+        # It then redirects the resulting hw:0,0 open to ALSA "default",
+        # preserving the stereo-to-four-channel route in /etc/asound.conf.
+        cat > /tmp/celmusper-i2s-usbid <<'EOF'
+2fc6:f043
+EOF
+        cat > /tmp/celmusper-i2s-stream0 <<'EOF'
+PureFox I2S at virtual-i2s, high speed : USB Audio
+
+Playback:
+  Status: Stop
+  Interface 1
+    Altset 1
+    Format: S16_LE
+    Channels: 2
+    Endpoint: 0x01 (1 OUT) (ASYNC)
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Data packet interval: 125 us
+    Bits: 16
+    Channel map: FL FR
+  Interface 1
+    Altset 2
+    Format: S24_3LE
+    Channels: 2
+    Endpoint: 0x01 (1 OUT) (ASYNC)
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Data packet interval: 125 us
+    Bits: 24
+    Channel map: FL FR
+  Interface 1
+    Altset 3
+    Format: S32_LE
+    Channels: 2
+    Endpoint: 0x01 (1 OUT) (ASYNC)
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600, 768000
+    Data packet interval: 125 us
+    Bits: 32
+    Channel map: FL FR
+  Interface 1
+    Altset 4
+    Format: SPECIAL DSD_U32_BE
+    Channels: 2
+    Endpoint: 0x01 (1 OUT) (ASYNC)
+    Rates: 44100, 48000, 88200, 96000, 176400, 192000, 352800, 384000, 705600
+    Data packet interval: 125 us
+    Bits: 32
+    DSD raw: DOP=0, bitrev=0
+    Channel map: FL FR
+EOF
+        preload=LD_PRELOAD=/usr/lib/libcelmusper_i2s.so
+        # CMT 1.3's declared-I2S path is not compatible with Rockchip PCM.
+        # Force its proven USB-enumeration path; the preload redirects only
+        # the virtual hw:0,0 device to ALSA's normal PCM route.
+        config_arg="--config /etc/celmusper_transport/cmt-i2s.conf"
+    else
+        preload=
+        # Keep the vendor's declared-I2S entry while using a real USB DAC:
+        # CMT then performs its normal USB capability negotiation.
+        config_arg="--config /etc/celmusper_transport/cmt.conf"
+    fi
+
+    # Renice the shell BEFORE launching so that the daemon AND all its
+    # child processes inherit the real-time-friendly priority.
+    renice -15 $$ >/dev/null 2>&1
+
+    env $preload "$DAEMON" $config_arg --daemon --pidfile "$PIDFILE" \
+        --transport-name "$(hostname)" --sink alsa \
+        >"$LOGFILE" 2>&1 &
+    # The daemon writes its PID after initialization (including mDNS setup).
+    # Wait up to one second instead of treating a normal slow start as error.
+    tries=0
+    while [ ! -r "$PIDFILE" ] && [ "$tries" -lt 10 ]; do
+        sleep 0.1
+        tries=$((tries + 1))
+    done
+    if [ ! -r "$PIDFILE" ]; then
+        echo "failed (see $LOGFILE)"
+        return 1
+    fi
+
+    pid=$(cat "$PIDFILE")
+    case "$pid" in
+        *[!0-9]*|'')
+            echo "failed (see $LOGFILE)"
+            return 1
+            ;;
+    esac
+    if ! kill -0 "$pid" 2>/dev/null; then
+        echo "failed (see $LOGFILE)"
+        return 1
+    fi
+
+    if [ -f /tmp/mixer_control_cache ]; then
+        mixer=$(cut -d, -f1 /tmp/mixer_control_cache | tr -d "'")
+        [ -n "$mixer" ] && amixer set "$mixer" unmute 2>/dev/null
+    fi
+    echo "started"
+}
+
+stop() {
+    if [ -r "$PIDFILE" ]; then
+        pid=$(cat "$PIDFILE")
+        case "$pid" in
+            *[!0-9]*|'') ;;
+            *)
+                # CMT can hang indefinitely in its SIGTERM path while an
+                # audio thread is active.  A player switch must be bounded.
+                kill -KILL "$pid" 2>/dev/null
+                ;;
+        esac
+        rm -f "$PIDFILE"
+    fi
+
+    # A daemon may survive a failed/manual start without writing its pidfile.
+    # BusyBox resolves it reliably by the executable basename.
+    for pid in $(pidof "$PROCESS" 2>/dev/null); do
+        kill -KILL "$pid" 2>/dev/null
+    done
+}
+
+restart() {
+    stop
+    start
+}
+
+case "$1" in
+    start|stop|restart) "$1" ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac
+
+exit $?
