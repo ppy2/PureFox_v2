@@ -787,6 +787,13 @@ $(document).ready(function () {
         if ($(e.target).is('a') || $(e.target).is('img')) return true;
         if (!$(this).data('service')) return;
         
+        // Ignore clicks that follow a swipe gesture — the user was
+        // hiding the button, not requesting a player switch.
+        if (window._purefoxSwipeInProgress) {
+            window._purefoxSwipeInProgress = false;
+            return;
+        }
+        
         if (isServiceSwitching || window.purefoxServiceSwitchInProgress) {
             customAlert(translations[currentLang]['service_switch_in_progress']);
             return;
@@ -1889,6 +1896,9 @@ $(document).ready(function () {
         
         // Swipe left to hide
         if (swipeDistance < -SWIPE_THRESHOLD) {
+            // Suppress the click event that follows touch-end / mouse-up
+            // so the player is not switched to the one being hidden.
+            window._purefoxSwipeInProgress = true;
             const serviceName = $button.text().trim();
             const currentHost = window.location.hostname;
             const resetUrl = `http://${currentHost}/default.php`;
