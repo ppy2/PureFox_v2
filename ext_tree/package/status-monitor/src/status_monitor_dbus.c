@@ -240,6 +240,7 @@ void get_active_service(char* service, pid_t *pid) {
         {"ap2renderer", "aprenderer"},
         {"aplayer", "aplayer"},
         {"apscream", "apscream"},
+        {"scream", "scream"},
         {"squeezelite", "lms"},
         {"shairport-sync", "shairport"},
         {"librespot", "spotify"},

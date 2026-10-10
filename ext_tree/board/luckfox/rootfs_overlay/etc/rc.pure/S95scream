@@ -1,0 +1,30 @@
+#!/bin/sh
+
+start() {
+    printf "Starting Scream: "
+    /usr/bin/scream -o alsa -t 80 > /dev/null 2>&1 &
+    sleep 0.5
+    renice -15 $(pidof scream) 2>/dev/null
+    if [ -f /tmp/mixer_control_cache ]; then
+        MIXER=$(cat /tmp/mixer_control_cache | cut -d, -f1 | tr -d "'")
+        [ -n "$MIXER" ] && amixer set "$MIXER" unmute 2>/dev/null
+    fi
+    echo "OK"
+}
+stop() {
+    killall -9 scream
+}
+restart() {
+    stop
+    start
+}
+case "$1" in
+  start|stop|restart)
+    "$1"
+    ;;
+  *)
+    echo "Usage: $0 {start|stop|restart}"
+    exit 1
+esac
+
+exit $?

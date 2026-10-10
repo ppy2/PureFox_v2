@@ -1,0 +1,29 @@
+diff --git a/Receivers/unix/alsa.c b/Receivers/unix/alsa.c
+index 9437d78..0f16a08 100644
+--- a/Receivers/unix/alsa.c
++++ b/Receivers/unix/alsa.c
+@@ -54,6 +54,24 @@ int setup_alsa(snd_pcm_t **psnd, snd_pcm_format_t format, unsigned int rate, uns
+                            channels, rate, soft_resample, latency);
+   SNDCHK("snd_pcm_set_params", ret);
+ 
++  /* snd_pcm_set_params() sets the start threshold to almost the whole buffer.
++   * On drivers with a large minimum buffer this means hundreds of ms of silence
++   * and extra delay after every underrun. Start playback after target latency. */
++  {
++    snd_pcm_sw_params_t *sw;
++    snd_pcm_uframes_t buffer_size, period_size, threshold;
++    snd_pcm_sw_params_alloca(&sw);
++    if (snd_pcm_get_params(*psnd, &buffer_size, &period_size) == 0 &&
++        snd_pcm_sw_params_current(*psnd, sw) == 0) {
++      threshold = (snd_pcm_uframes_t)(((unsigned long long)rate * target_latency_ms) / 1000);
++      if (threshold < period_size) threshold = period_size;
++      if (threshold > buffer_size) threshold = buffer_size;
++      if (snd_pcm_sw_params_set_start_threshold(*psnd, sw, threshold) == 0) {
++        snd_pcm_sw_params(*psnd, sw);
++      }
++    }
++  }
++
+   ret = snd_pcm_set_chmap(*psnd, *channel_map);
+   if (ret == -ENXIO) { // snd_pcm_set_chmap returns -ENXIO if device does not support channel maps at all
+     if (channels > 2) { // but it's relevant only above 2 channels

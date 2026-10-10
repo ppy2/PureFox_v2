@@ -56,6 +56,7 @@ $players = [
     'aprenderer' => ['process' => 'ap2renderer',     'script' => 'S95aprenderer'],
     'aplayer'    => ['process' => 'aplayer',         'script' => 'S95aplayer'],
     'apscream'   => ['process' => 'apscream',        'script' => 'S95apscream'],
+    'scream'     => ['process' => 'scream',          'script' => 'S95scream'],
     'shairport'  => ['process' => 'shairport-sync',  'script' => 'S95shairport'],
     'lms'        => ['process' => 'squeezelite',     'script' => 'S95squeezelite'],
     'spotify'    => ['process' => 'librespot',       'script' => 'S95spotify'],
@@ -99,7 +100,7 @@ try {
     executeCommand('[ -x /etc/init.d/S95player ] && /etc/init.d/S95player stop || true');
 
     // Hard-stop all known player processes (fallback)
-    stopProcessGroup(['networkaudiod', 'raat_app', 'mpd', 'upmpdcli', 'ap2renderer', 'aplayer', 'apscream', 'shairport-sync', 'squeezelite', 'librespot', 'qobuz-connect', 'celmusper-trans', 'tidalconnect', 'tc_volume', 'avahi-publish-service']);
+    stopProcessGroup(['networkaudiod', 'raat_app', 'mpd', 'upmpdcli', 'ap2renderer', 'aplayer', 'apscream', 'scream', 'shairport-sync', 'squeezelite', 'librespot', 'qobuz-connect', 'celmusper-trans', 'tidalconnect', 'tc_volume', 'avahi-publish-service']);
 
     // Create one stable managed symlink, do not touch other S95 services
     executeCommand('rm -f /etc/init.d/S95player');

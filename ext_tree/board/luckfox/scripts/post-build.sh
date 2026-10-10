@@ -70,7 +70,7 @@ echo "uprclautostart = 1" > $TARGET_DIR/etc/upmpdcli.conf
 echo "friendlyname = PureOS" >> $TARGET_DIR/etc/upmpdcli.conf
 #sed -i "s/console::respawn/#console::respawn/g" $TARGET_DIR/etc/inittab
 sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/g" $TARGET_DIR/etc/ssh/sshd_config
-chown root:root $TARGET_DIR/usr/bin/php-cgi
+chown root:root $TARGET_DIR/usr/bin/php-cgi || true
 chmod u+s $TARGET_DIR/usr/bin/php-cgi
 
 

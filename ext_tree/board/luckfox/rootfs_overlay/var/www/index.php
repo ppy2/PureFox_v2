@@ -36,6 +36,9 @@
     		    <img src="assets/img/settings.svg" class="settings-icon" alt="Settings">
     		</a>
 	</button>
+    <button class="btn-custom primary" data-service="scream" data-process="scream">
+        Scream
+    </button>
     </div>
         <button class="btn-custom success" data-service="spotify" data-process="spotify">Spotify Connect</button>
         <button class="btn-custom success" data-service="qobuz" data-process="qobuz">Qobuz Connect</button>

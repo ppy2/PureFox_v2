@@ -1,0 +1,5 @@
+config BR2_PACKAGE_SCREAM
+    bool "scream"
+    select BR2_PACKAGE_ALSA_LIB
+    help
+      Scream network audio receiver (ALSA output).
