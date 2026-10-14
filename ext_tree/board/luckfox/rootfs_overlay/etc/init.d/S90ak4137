@@ -4,14 +4,14 @@
 
 case "$1" in
     start)
-    # Enable AK4137 via GPIO52
-    echo 52 > /sys/class/gpio/export
-    echo out > /sys/class/gpio/gpio52/direction
-
-    if grep -q "SUBMODE=plr" /etc/i2s.conf; then
-	echo 0 > /sys/class/gpio/gpio52/value
+    # Pin 7 / GPIO52: on MAX hardware this is the 5V VBUS switch of the USB-C
+    # port; only on the DSD'it carrier would it be the AK4137 enable. The USB
+    # mode owns the pin: host -> 5V on the port, USBtoI2S gadget -> 5V off.
+    # (The old SUBMODE-driven value drove 5V onto the port in gadget mode.)
+    if [ -f /etc/usb_to_i2s.state ]; then
+        /usr/bin/usb-vbus off
     else
-        echo 1 > /sys/class/gpio/gpio52/value
+        /usr/bin/usb-vbus on
     fi
 
     usleep 10000

@@ -17,15 +17,30 @@
 start() {
     echo "Starting PureCore UAC2 gadget..."
     modprobe dwc3
-    sleep 1  # Give time for USB initialization
+    # The controller probes synchronously with the module load, so poll for the
+    # UDC (max ~1 s) instead of a blind sleep: this runs in the first rcS
+    # script and anything here is added to the host-visible power-up time.
+    i=0
+    while [ -z "$(ls /sys/class/udc 2>/dev/null)" ] && [ $i -lt 20 ]; do
+        usleep 50000 2>/dev/null || sleep 1
+        i=$((i + 1))
+    done
     # Check if UDC is available
-    if [ ! -d /sys/class/udc ]; then
+    if [ -z "$(ls /sys/class/udc 2>/dev/null)" ]; then
         echo "UDC not available, skipping PureCore gadget"
         return 1
     fi
 
     # Create PureCore gadget
     cd /sys/kernel/config/usb_gadget
+
+    # Already created and bound (early boot path: S00usbmodules does this right
+    # after loading the modules) -> leave it alone, otherwise the host would
+    # see a spurious re-enumeration in the middle of the boot.
+    if [ -d purecore ] && [ -n "$(cat purecore/UDC 2>/dev/null)" ]; then
+        echo "PureCore UAC2 gadget already configured and bound"
+        return 0
+    fi
 
     # Completely remove old gadget if it exists
     if [ -d "purecore" ]; then

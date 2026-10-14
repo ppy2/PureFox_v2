@@ -2,24 +2,32 @@
 # chronyd may start before it has resolved pool.ntp.org. Resolve the pool
 # through the DHCP-provided resolver and add the current addresses explicitly.
 
+bootstrap() {
+    for i in 1 2 3 4 5; do
+        chronyc activity 2>/dev/null | grep -q '0 sources online' || exit 0
+
+        nslookup pool.ntp.org 2>/dev/null |
+            awk '/^Address: [0-9.]+$/ { print $2 }' |
+            while read -r server; do
+                chronyc -a "add server $server iburst" >/dev/null 2>&1
+            done
+
+        chronyc -a burst 4/4 >/dev/null 2>&1
+        sleep 2
+        chronyc tracking 2>/dev/null | grep -q 'Leap status     : Normal' && {
+            chronyc -a makestep >/dev/null 2>&1
+            exit 0
+        }
+    done
+}
+
 case "$1" in
     start)
-        for i in 1 2 3 4 5; do
-            chronyc activity 2>/dev/null | grep -q '0 sources online' || exit 0
-
-            nslookup pool.ntp.org 2>/dev/null |
-                awk '/^Address: [0-9.]+$/ { print $2 }' |
-                while read -r server; do
-                    chronyc -a "add server $server iburst" >/dev/null 2>&1
-                done
-
-            chronyc -a burst 4/4 >/dev/null 2>&1
-            sleep 2
-            chronyc tracking 2>/dev/null | grep -q 'Leap status     : Normal' && {
-                chronyc -a makestep >/dev/null 2>&1
-                exit 0
-            }
-        done
+        # Run in the background: this loop waits for chronyd sources (up to
+        # 5 x 2 s of sleeps) and must never delay the boot -- the USB gadget
+        # and the players start right after this script. With no network the
+        # loop just expires in the background instead of blocking rcS.
+        bootstrap &
         ;;
 esac
 

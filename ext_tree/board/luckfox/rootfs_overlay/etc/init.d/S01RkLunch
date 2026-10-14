@@ -35,7 +35,14 @@ fi
 /sbin/ifconfig eth0 down
 /sbin/ifconfig eth0 hw ether $MAC
 /sbin/ifconfig eth0 up
-/sbin/udhcpc -i eth0 -t 5 -A 10 -x hostname:purefox
+
+# DHCP must NEVER block the boot. udhcpc without -n/-b retries forever
+# (5 discovers x 3 s, then -A 10 s, repeat), so with no cable / no DHCP
+# server rcS hangs on this line and every later service -- including the
+# USB gadget (S98uac2) and the UAC2 router (S99) -- never starts.
+# Backgrounded it keeps the same retry behaviour, so a cable plugged in
+# later still gets a lease, while the boot continues immediately.
+/sbin/udhcpc -i eth0 -t 5 -A 10 -x hostname:purefox </dev/null &
 
 grep MCLK=1024 /etc/i2s.conf && echo 1024 > /sys/devices/platform/ffae0000.i2s/mclk_multiplier
 echo 100 > /sys/devices/platform/ffae0000.i2s/postmute_delay_ms

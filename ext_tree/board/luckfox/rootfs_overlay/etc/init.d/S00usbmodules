@@ -6,6 +6,10 @@ if [ -f /etc/usb_to_i2s.state ]; then
 	modprobe dwc3-of-simple
 	# Gadget mode: 5V VBUS on the USB-C port must stay off
 	/usr/bin/usb-vbus off
+	# Create and bind the UAC2 gadget right here, in the first rcS script:
+	# the host must see the USB audio device immediately after power-up, not
+	# at the end of the boot. The later S98uac2 start is idempotent (no-op).
+	/etc/rc.pure/S98uac2 start
 else
 	# USBtoI2S mode disabled - load host modules
 	modprobe dwc3
